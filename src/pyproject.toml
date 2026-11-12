@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "okxbot"
+version = "0.1.0"
+description = "Infrastructure for an OKX spot trading bot with a deterministic executor"
+requires-python = ">=3.11"
+dependencies = [
+  # Official OKX v5 REST SDK (HMAC signing, demo flag '0'/'1' built in).
+  "python-okx>=0.3.5,<0.4",
+  # HTTP client used by CoinGecko client and the collector loop.
+  "httpx>=0.27,<0.29",
+  "pydantic>=2.6,<3",
+  "PyYAML>=6.0,<7",
+  "fastapi>=0.110,<1",
+  "uvicorn[standard]>=0.29,<1",
+  "structlog>=24.1,<26",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0,<9",
+  "pytest-asyncio>=0.23,<1",
+  "ruff>=0.4,<1",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["okxbot*", "cli*"]
+
+# Tool configuration (ruff, pytest) lives in the repository root:
+# ../ruff.toml and ../pytest.ini — a single source of truth for the whole project.

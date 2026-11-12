@@ -1,0 +1,29 @@
+# DEMO override: OKX sandbox. Usage:
+#   docker compose -f compose.yaml -f compose.demo.yaml up -d
+# The executor gets flag='1' AND the demo secrets file (read-only mount).
+# The REST endpoints are the same as live — the difference is the x-simulated-trading: 1 header,
+# which the python-okx SDK adds automatically when flag='1'.
+
+name: okxbot
+
+secrets:
+  okx_credentials:
+    file: ./secrets/okx_demo.toml
+
+services:
+  executor:
+    environment:
+      OKX_FLAG: "1"
+      BOT_MODE: demo
+      SECRETS_FILE: /run/secrets/okx.toml
+
+  collector:
+    environment:
+      OKX_FLAG: "1"
+      BOT_MODE: demo
+
+  opencode:
+    environment:
+      OKX_FLAG: "1"
+      BOT_MODE: demo
+      EXECUTOR_URL: http://executor:8080

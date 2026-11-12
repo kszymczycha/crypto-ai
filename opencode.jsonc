@@ -1,0 +1,64 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  // The model is an alias for the provider defined below. The actual model ID
+  // comes from OPENCODE_MODEL_ID (e.g. deepseek-v4.1-flash), and the endpoint
+  // from OPENCODE_BASE_URL. The key is read from OPENCODE_API_KEY.
+  "model": "agent/default",
+
+  "providers": {
+    "agent": {
+      "name": "Agent provider",
+      "env": ["OPENCODE_API_KEY"],
+      "package": "@opencode/ai/providers/anthropic-compatible",
+      "settings": {
+        "baseURL": "{env:OPENCODE_BASE_URL}"
+      },
+      "models": {
+        "default": {
+          "name": "Default model",
+          "modelID": "{env:OPENCODE_MODEL_ID}"
+        }
+      }
+    }
+  },
+
+  // Rules are ordered: the last matching rule wins.
+  "permissions": [
+    // Shell: ask by default. Only safe bot CLI commands run without asking.
+    { "action": "shell", "resource": "*", "effect": "ask" },
+    { "action": "shell", "resource": "python -m cli.*", "effect": "allow" },
+    { "action": "shell", "resource": "python3 -m cli.*", "effect": "allow" },
+    { "action": "shell", "resource": "git status*", "effect": "allow" },
+    { "action": "shell", "resource": "git diff*", "effect": "allow" },
+    { "action": "shell", "resource": "git log*", "effect": "allow" },
+    // `docker compose config` interpolates secrets into stdout — never allow it.
+    { "action": "shell", "resource": "docker compose *config*", "effect": "deny" },
+    { "action": "shell", "resource": "docker-compose *config*", "effect": "deny" },
+
+    // Editing: ask by default. The strategy is under active iteration — allow it.
+    { "action": "edit", "resource": "*", "effect": "ask" },
+    { "action": "edit", "resource": "src/okxbot/strategy/**", "effect": "allow" },
+    // Protected files: a change requires the user's explicit approval (src is RW).
+    { "action": "edit", "resource": "src/okxbot/executor/risk_engine.py", "effect": "ask" },
+    { "action": "edit", "resource": "src/okxbot/executor/order_router.py", "effect": "ask" },
+    // These paths are mounted read-only; an edit would fail anyway.
+    { "action": "edit", "resource": "config/**", "effect": "deny" },
+    { "action": "edit", "resource": "docs/**", "effect": "deny" },
+    { "action": "edit", "resource": "tests/**", "effect": "deny" },
+    { "action": "edit", "resource": "scripts/**", "effect": "deny" },
+    { "action": "edit", "resource": "AGENTS.md", "effect": "deny" },
+    { "action": "edit", "resource": "PLAN.md", "effect": "deny" },
+    { "action": "edit", "resource": "opencode.jsonc", "effect": "deny" },
+    { "action": "edit", "resource": ".opencode/**", "effect": "deny" },
+
+    // Secrets are never read by the agent.
+    { "action": "read", "resource": "secrets/*", "effect": "deny" },
+    { "action": "read", "resource": ".env", "effect": "deny" },
+    { "action": "read", "resource": ".env.*", "effect": "deny" },
+    { "action": "read", "resource": ".env.example", "effect": "allow" },
+
+    // Ask before going outside the project — the container mounts no secrets anyway.
+    { "action": "external_directory", "resource": "*", "effect": "ask" }
+  ]
+}

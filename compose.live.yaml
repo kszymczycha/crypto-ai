@@ -1,0 +1,27 @@
+# LIVE override: real money. Usage (after the checklist in docs/runbook.md):
+#   docker compose -f compose.yaml -f compose.live.yaml up -d executor collector
+# Requires a secrets/okx_live.toml file with flag = "0" and a key without withdrawal rights.
+
+name: okxbot
+
+secrets:
+  okx_credentials:
+    file: ./secrets/okx_live.toml
+
+services:
+  executor:
+    environment:
+      OKX_FLAG: "0"
+      BOT_MODE: live
+      SECRETS_FILE: /run/secrets/okx.toml
+
+  collector:
+    environment:
+      OKX_FLAG: "0"
+      BOT_MODE: live
+
+  opencode:
+    environment:
+      OKX_FLAG: "0"
+      BOT_MODE: live
+      EXECUTOR_URL: http://executor:8080

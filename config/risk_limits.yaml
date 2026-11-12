@@ -1,0 +1,18 @@
+# Risk policy — values enforced by the executor (risk_engine).
+# A change requires restarting the executor container. See docs/risk_policy.md.
+max_position_pct: 5          # max % of capital per position
+max_daily_loss_pct: 3        # daily loss limit (loss of the day's starting capital)
+# Drawdown from the High-Water Mark (the highest recorded capital), not from the start
+# of the day. The HWM only moves up and does not reset at the end of the day. Exceeding it
+# blocks every new BUY (selling remains open for manual exit).
+max_portfolio_drawdown_pct: 15
+max_open_positions: 3
+max_order_usdt: 50
+min_order_usdt: 5
+require_confirmation_above_usdt: 100
+
+# Additional safeguards (enforced by the same validator)
+allowed_sides: [buy, sell]
+allowed_order_types: [market, limit]
+cooldown_seconds_between_signals: 10   # minimum interval between signals for a pair
+max_signals_per_day: 40                # hard limit on the number of accepted signals

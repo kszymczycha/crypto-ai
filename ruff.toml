@@ -1,0 +1,18 @@
+# Ruff configuration for the whole repo (src/, tests/, scripts/).
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "S"]
+ignore = [
+    "S101",  # asserts in tests are fine
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["S101", "S105", "S106", "E501"]
+"scripts/*" = ["S101", "T201"]
+"src/cli/*" = ["T201"]  # the CLI prints JSON to stdout — that is its contract
+
+[lint.isort]
+known-first-party = ["okxbot", "cli"]

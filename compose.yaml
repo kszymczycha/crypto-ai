@@ -1,0 +1,158 @@
+# Docker Compose: executor (secret keys), collector (public data) and opencode.
+# Two networks: `botnet` (internal, no internet) and `egress` (internet for OKX/CoinGecko/model provider).
+# Executor port 8080 is NOT published to the host — access only from `botnet`.
+
+name: okxbot
+
+x-common-env: &common-env
+  CONFIG_DIR: /app/config
+  DATA_DIR: /app/data
+  LOGS_DIR: /app/logs
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  OKX_FLAG: ${OKX_FLAG:-1}
+  EXECUTOR_URL: http://executor:8080
+  COLLECTOR_INTERVAL_SECONDS: ${COLLECTOR_INTERVAL_SECONDS:-60}
+  TZ: UTC
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  executor:
+    # Note: compose without a mode override will not start correctly (no secrets
+    # file at /run/secrets/okx.toml) — the entrypoint exits with a descriptive error.
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: okxbot:local
+    container_name: okxbot-executor
+    restart: unless-stopped
+    entrypoint: ["/usr/bin/tini", "--", "/app/docker/entrypoint-executor.sh"]
+    environment:
+      <<: *common-env
+      SECRETS_FILE: /run/secrets/okx.toml
+      REQUIRE_SECRETS: "1"
+    volumes:
+      - ./docker:/app/docker:ro
+      - ./data:/app/data
+      - ./logs:/app/logs
+    # Secrets via the native compose mechanism, NOT via bind-mount. Reason:
+    # a bind-mount preserves the host permissions (chmod 600 = owner uid 1000),
+    # while the process in the container runs as uid 10001 → PermissionError at startup.
+    # Compose mounts secrets as root:root 0444, so non-root can read them,
+    # while on the host the file can (and should) still be 600. The mode override selects the file.
+    secrets:
+      - source: okx_credentials
+        target: okx.toml
+    networks:
+      - botnet
+      - egress
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
+
+  collector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: okxbot:local
+    container_name: okxbot-collector
+    restart: unless-stopped
+    entrypoint: ["/usr/bin/tini", "--", "/app/docker/entrypoint-collector.sh"]
+    environment:
+      <<: *common-env
+      # The collector does not touch the exchange — it needs no secrets and must not have them.
+      REQUIRE_SECRETS: "0"
+    volumes:
+      - ./docker:/app/docker:ro
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - botnet
+      - egress
+    depends_on:
+      executor:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import okxbot' || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
+
+  opencode:
+    # OpenCode has its own image (Node 22 + OpenCode CLI), not the base image.
+    # The container receives no OKX secrets — only EXECUTOR_URL and public data.
+    build:
+      context: .
+      dockerfile: docker/opencode.Dockerfile
+    image: okxbot-opencode:local
+    container_name: okxbot-opencode
+    restart: "no"
+    entrypoint: ["/usr/bin/tini", "--", "/app/docker/entrypoint-opencode.sh"]
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    environment:
+      <<: *common-env
+      # Model provider: values are passed to opencode.jsonc via {env:...}.
+      #   OPENCODE_BASE_URL  - Anthropic-API-compatible endpoint (e.g. DeepSeek)
+      #   OPENCODE_API_KEY   - provider key
+      #   OPENCODE_MODEL_ID  - model identifier (e.g. deepseek-v4.1-flash)
+      OPENCODE_BASE_URL: ${OPENCODE_BASE_URL:-}
+      OPENCODE_API_KEY: ${OPENCODE_API_KEY:-}
+      OPENCODE_MODEL_ID: ${OPENCODE_MODEL_ID:-deepseek-v4.1-flash}
+      REQUIRE_SECRETS: "0"
+      PYTHONPATH: /app/src
+    volumes:
+      - ./docker:/app/docker:ro
+      # src RW: the agent can iterate on strategy/ once an edit is approved in OpenCode.
+      - ./src:/app/src
+      - ./config:/app/config:ro
+      - ./docs:/app/docs:ro
+      - ./scripts:/app/scripts:ro
+      - ./tests:/app/tests:ro
+      - ./AGENTS.md:/app/AGENTS.md:ro
+      - ./PLAN.md:/app/PLAN.md:ro
+      - ./opencode.jsonc:/app/opencode.jsonc:ro
+      - ./.opencode:/app/.opencode:ro
+      - ./data:/app/data:ro
+      - ./logs:/app/logs
+      - opencode-home:/home/bot
+    networks:
+      - botnet
+      - egress
+    depends_on:
+      executor:
+        condition: service_healthy
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  opencode-home:
+
+# Defaults to the demo file (safer default: no risk that a missing
+# override starts live). Mode overlays replace `file`.
+secrets:
+  okx_credentials:
+    file: ./secrets/okx_demo.toml
+
+networks:
+  botnet:
+    driver: bridge
+    internal: true
+  egress:
+    driver: bridge

@@ -1,0 +1,57 @@
+# Secrets — never into the repo.
+# Note: "secrets/" would exclude the ENTIRE directory and git would not descend into it,
+# so the negations "!secrets/.gitkeep" and "!secrets/*.example" would be dead.
+# That is why we exclude the contents ("secrets/*"), not the directory itself.
+secrets/*
+!secrets/.gitkeep
+!secrets/*.example
+.env
+.env.*
+!*.env.example
+*.pem
+*.key
+
+# SSH keys. They are unrelated to OKX secrets (those are in "secrets/"), but
+# copying a key into the project directory — e.g. while debugging a deploy —
+# is a realistic scenario, and *.pem/*.key do not catch it.
+# "id_rsa*" also covers id_rsa.pub: a public key is not a secret, but
+# keeping it in the repo has no value, and splitting the patterns is a trap.
+id_rsa*
+id_ed25519*
+id_ecdsa*
+id_dsa*
+
+# Runtime data and logs.
+# The leading "/" is required: without it the pattern ("data/") matches every
+# directory with that name at any level, so it also caught
+# src/okxbot/data/ — the whole analytics module never made it into the repository.
+/data/
+/logs/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# OpenCode — the project configuration is tracked, local overrides are not
+.opencode/*.local.json

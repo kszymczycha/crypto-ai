@@ -1,0 +1,21 @@
+# Trading pairs handled by the bot (OKX spot, quoted in USDT).
+# "coingecko" is the asset id in the CoinGecko API (market data, 60 s cache).
+pairs:
+  - symbol: BTC-USDT
+    base: BTC
+    quote: USDT
+    coingecko: bitcoin
+    max_order_usdt: 50
+  - symbol: ETH-USDT
+    base: ETH
+    quote: USDT
+    coingecko: ethereum
+    max_order_usdt: 50
+  - symbol: SOL-USDT
+    base: SOL
+    quote: USDT
+    coingecko: solana
+    max_order_usdt: 25
+
+# Pairs used by default by the collector and cli/market_snapshot.
+default_pairs: [BTC-USDT, ETH-USDT]

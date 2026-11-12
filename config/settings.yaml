@@ -1,0 +1,56 @@
+# Application settings. Values are overridden by environment variables from config/env/*.env.
+app:
+  name: okx-bot
+  timezone: UTC
+
+paths:
+  data_dir: data
+  logs_dir: logs
+  db_file: state.db
+  cache_dir: data/cache
+  config_dir: config
+  secrets_file: /run/secrets/okx.toml
+
+executor:
+  host: 0.0.0.0
+  port: 8080
+  signal_path: /signal
+  state_path: /state
+  health_path: /health
+  # Idempotency: the same key within a window of X seconds => one signal.
+  idempotency_window_seconds: 300
+
+collector:
+  interval_seconds: 60
+  pairs: [BTC-USDT, ETH-USDT]
+  okx_tickers_path: /api/v5/market/tickers
+  coingecko_base_url: https://api.coingecko.com/api/v3
+  cache_ttl_prices_seconds: 60
+  cache_ttl_metadata_seconds: 300
+
+http:
+  timeout_seconds: 10
+  max_retries: 3
+  backoff_base_seconds: 0.5
+  backoff_max_seconds: 8
+
+logging:
+  level: INFO
+  json: true
+  max_bytes: 5242880
+  backup_count: 5
+
+indicators:
+  rsi_period: 14
+  ma_period: 20
+  # Long MA used as a market-regime filter (do not buy into a downtrend).
+  # Needs roughly trend_ma_period candles of history to be meaningful.
+  trend_ma_period: 200
+  atr_period: 14
+  vol_period: 20
+  # Signal horizon. 1m produced noise: RSI(14) on 1m spans ~14 minutes, far too
+  # short for a swing entry, and a 1% stop sits inside normal minute-to-minute
+  # BTC volatility. 4h gives RSI(14) ~2.3 days of context and MA200 ~33 days.
+  candle_bar: 4H
+  # Candles fetched per snapshot: enough for MA200 plus a safety margin.
+  candle_limit: 300

@@ -4,6 +4,11 @@ This file is the single source of project rules for the OpenCode agent. OpenCode
 loads it automatically. Tool permissions are in `opencode.jsonc`, and project
 priorities are in `PLAN.md`.
 
+## Session start
+
+At the start of every session, read `STATUS.md` before any work. It contains the
+current stage, blockers, and next steps. Update it at the end of the session.
+
 ## Mission
 
 Spot bot for OKX in demo/live mode. The agent is the **analyst and decision maker**: it
